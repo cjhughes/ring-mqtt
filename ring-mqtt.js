@@ -143,7 +143,7 @@ function getAlarmDevice(device) {
         case RingDeviceType.FloodFreezeSensor:
             return new FloodFreezeSensor(device, ringTopic)
         case RingDeviceType.SecurityPanel:
-            return new SecurityPanel(device, ringTopic)
+            return new SecurityPanel(device, ringTopic, CONFIG.code)
         case RingDeviceType.SmokeAlarm:
             return new SmokeAlarm(device, ringTopic)
         case RingDeviceType.CoAlarm:

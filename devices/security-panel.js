@@ -3,6 +3,12 @@ const utils = require( '../lib/utils' )
 const AlarmDevice = require('./alarm-device')
 
 class SecurityPanel extends AlarmDevice {
+    constructor(device, ringTopic, code) {
+      super(device, ringTopic)
+
+      this.code = code
+    }
+
     async init(mqttClient) {
         // Home Assistant component type and device class (set appropriate icon)
         this.component = 'alarm_control_panel'
@@ -33,7 +39,10 @@ class SecurityPanel extends AlarmDevice {
             payload_not_available: 'offline',
             state_topic: this.stateTopic,
             json_attributes_topic: this.attributesTopic,
-            command_topic: this.commandTopic
+            command_topic: this.commandTopic,
+            code: this.code,
+            code_arm_required: false,
+            code_disarm_required: true
         }
 
         debug('HASS config topic: '+this.configTopic)
