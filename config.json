@@ -2,10 +2,13 @@
     "host": "localhost",
     "port": 1883,
     "ring_topic": "ring",
-    "hass_topic": "hass/status",
+    "hass_topic": "homeassistant/status",
     "mqtt_user": "",
     "mqtt_pass": "",
     "ring_token": "",
     "enable_cameras": false,
+    "enable_modes" : false,
+    "enable_panic" : false,
+    "enable_volume" : false,
     "location_ids": [""]
 }

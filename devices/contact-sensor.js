@@ -3,58 +3,63 @@ const utils = require( '../lib/utils' )
 const AlarmDevice = require('./alarm-device')
 
 class ContactSensor extends AlarmDevice {
-    async init(mqttClient) {
-        // Home Assistant component type and device class (set appropriate icon)
+    async publish(locationConnected) {
+        // Only publish if location websocket is connected
+        if (!locationConnected) { return }
+
         this.component = 'binary_sensor'
-        if (this.device.deviceType == 'sensor.zone') {
-            // Device is Retrofit Zone sensor
-            this.className = 'safety'
-            this.sensorType = 'zone'
-        } else {
-            // Device is contact sensor
-            this.className = (this.device.data.subCategoryId == 2) ? 'window' : 'door'
-            this.sensorType = 'contact'
+        switch (this.device.deviceType) {
+            case 'sensor.zone':
+                // Home Assistant component type and device class (set appropriate icon)
+                this.className = 'safety'
+                this.sensorType = 'zone'
+                this.deviceData.mdl = 'Retrofit Zone'
+                break;
+            case 'sensor.tilt':
+                // Home Assistant component type and device class (set appropriate icon)
+                this.className = 'garage_door'
+                this.sensorType = 'tilt'
+                this.deviceData.mdl = 'Tilt Sensor'
+                break;
+            default:
+                this.className = (this.device.data.subCategoryId == 2) ? 'window' : 'door'
+                this.sensorType = 'contact'
+                this.deviceData.mdl = 'Contact Sensor'
         }
 
-        // Build required MQTT topics for device
-        this.deviceTopic = this.alarmTopic+'/'+this.component+'/'+this.deviceId
-        this.stateTopic = this.deviceTopic+'/'+this.sensorType+'_state'
-        this.attributesTopic = this.deviceTopic+'/attributes'
-        this.availabilityTopic = this.deviceTopic+'/status'
+        // Build required MQTT topics
+        this.stateTopic = this.deviceTopic+'/'+this.sensorType+'/state'
         this.configTopic = 'homeassistant/'+this.component+'/'+this.locationId+'/'+this.deviceId+'/config'
 
-        // Publish discovery message for HA and wait 2 seoonds before sending state
-        this.publishDiscovery(mqttClient)
-        await utils.sleep(2)
-
-        // Publish device state data with optional subscribe
-        this.publishSubscribeDevice(mqttClient)
+        // Publish device data
+        this.publishDevice()
     }
 
-    publishDiscovery(mqttClient) {
+    initDiscoveryData() {
         // Build the MQTT discovery message
-        const message = {
-            name: this.device.name,
-            unique_id: this.deviceId,
-            availability_topic: this.availabilityTopic,
-            payload_available: 'online',
-            payload_not_available: 'offline',
-            state_topic: this.stateTopic,
-            json_attributes_topic: this.attributesTopic,
-            device_class: this.className
-        }
+        this.discoveryData.push({
+            message: {
+                name: this.device.name,
+                unique_id: this.deviceId,
+                availability_topic: this.availabilityTopic,
+                payload_available: 'online',
+                payload_not_available: 'offline',
+                state_topic: this.stateTopic,
+                device_class: this.className,
+                device: this.deviceData
+            },
+            configTopic: this.configTopic
+        })
 
-        debug('HASS config topic: '+this.configTopic)
-        debug(message)
-        this.publishMqtt(mqttClient, this.configTopic, JSON.stringify(message))
+        this.initInfoDiscoveryData()
     }
 
-    publishData(mqttClient) {
+    publishData() {
         const contactState = this.device.data.faulted ? 'ON' : 'OFF'
         // Publish sensor state
-        this.publishMqtt(mqttClient, this.stateTopic, contactState, true)
+        this.publishMqtt(this.stateTopic, contactState, true)
         // Publish attributes (batterylevel, tamper status)
-        this.publishAttributes(mqttClient)
+        this.publishAttributes()
     }
 }
 

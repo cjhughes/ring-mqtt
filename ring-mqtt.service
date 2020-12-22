@@ -1,15 +1,19 @@
 #!/bin/sh -
 [Unit]
 Description=ring-mqtt
+After=network.target
 
 [Service]
 ExecStart=/usr/bin/node /opt/ring-mqtt/ring-mqtt.js
 Restart=always
-User=homeassistant
-Group=homeassistant
+User=root
+Group=root
 Environment=PATH=/usr/bin/
 Environment=NODE_ENV=production
-WorkingDirectory=/usr/bin/
+Environment=DEBUG=ring-mqtt
+StandardOutput=file:/var/log/ring-mqtt.log
+StandardError=file:/var/log/ring-mqtt.log
+WorkingDirectory=/opt/ring-mqtt
 
 [Install]
 WantedBy=multi-user.target

@@ -3,51 +3,51 @@ const utils = require( '../lib/utils' )
 const AlarmDevice = require('./alarm-device')
 
 class CoAlarm extends AlarmDevice {
+    async publish(locationConnected) {
+        // Only publish if location websocket is connected
+        if (!locationConnected) { return }
 
-    async init(mqttClient) {
-       // Home Assistant component type and device class (set appropriate icon)
+        // Home Assistant component type and device class (set appropriate icon)
         this.component = 'binary_sensor'
         this.className = 'gas'
 
-        // Build required MQTT topics for device
-        this.deviceTopic = this.alarmTopic+'/'+this.component+'/'+this.deviceId
-        this.stateTopic = this.deviceTopic+'/co_state'
-        this.attributesTopic = this.deviceTopic+'/attributes'
-        this.availabilityTopic = this.deviceTopic+'/status'
+        // Device data for Home Assistant device registry
+        this.deviceData.mdl = 'CO Alarm'
+        this.deviceData.mf = 'First Alert' // Hardcode for now until refactor for relationship support
+
+        // Build required MQTT topics
+        this.stateTopic = this.deviceTopic+'/co/state'
         this.configTopic = 'homeassistant/'+this.component+'/'+this.locationId+'/'+this.deviceId+'/config'
-
-        // Publish discovery message for HA and wait 2 seoonds before sending state
-        this.publishDiscovery(mqttClient)
-        await utils.sleep(2)
-
-        // Publish device state data with optional subscribe
-        this.publishSubscribeDevice(mqttClient)
+ 
+        // Publish device data
+        this.publishDevice()
     }
 
-    publishDiscovery(mqttClient) {
+    initDiscoveryData() {
         // Build the MQTT discovery message
-        const message = {
-            name: this.device.name,
-            unique_id: this.deviceId,
-            availability_topic: this.availabilityTopic,
-            payload_available: 'online',
-            payload_not_available: 'offline',
-            state_topic: this.stateTopic,
-            json_attributes_topic: this.attributesTopic,
-            device_class: this.className
-        }
+        this.discoveryData.push({
+            message: {
+                name: this.device.name,
+                unique_id: this.deviceId,
+                availability_topic: this.availabilityTopic,
+                payload_available: 'online',
+                payload_not_available: 'offline',
+                state_topic: this.stateTopic,
+                device_class: this.className,
+                device: this.deviceData
+            },
+            configTopic: this.configTopic
+        })
 
-        debug('HASS config topic: '+this.configTopic)
-        debug(message)
-        this.publishMqtt(mqttClient, this.configTopic, JSON.stringify(message))
+        this.initInfoDiscoveryData()
     }
 
-    publishData(mqttClient) {
+    publishData() {
         const coState = this.device.data.alarmStatus === 'active' ? 'ON' : 'OFF'
         // Publish sensor state
-        this.publishMqtt(mqttClient, this.stateTopic, coState, true)
+        this.publishMqtt(this.stateTopic, coState, true)
         // Publish attributes (batterylevel, tamper status)
-        this.publishAttributes(mqttClient)
+        this.publishAttributes()
     }
 }
 
